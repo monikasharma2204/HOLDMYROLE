@@ -1,0 +1,211 @@
+FRONTEND ENGINEERING ASSESSMENT
+E-Commerce Web Application
+
+Welcome to your frontend engineering assessment.
+
+You have been provided with a working backend and REST API built with Next.js App Router, Prisma ORM, and PostgreSQL.
+
+Your task is to design and implement the user-facing frontend application that integrates with the provided APIs.
+
+1. WHAT HAS BEEN PROVIDED
+
+The starter repository includes:
+
+- A working backend with API routes for authentication, product CRUD operations, search, category filtering, sorting, and pagination.
+- A configured Prisma schema and seeded sample data.
+- An automated backend test suite. Run `npm test` to verify the backend.
+- A typed API client at `lib/api/client.ts`, including authentication and product helper functions.
+- API documentation at `docs/API.md`, including endpoint details, request formats, and response status codes.
+- A minimal development shell with basic navigation and placeholder pages.
+
+Review the repository and its documentation before you begin. Preserve existing backend functionality.
+
+2. YOUR ASSIGNMENT
+
+Replace the starter placeholders with a modern, responsive, functional e-commerce frontend. The frontend must use the provided APIs rather than hardcoded product data.
+
+A. PUBLIC PRODUCT CATALOGUE — /products
+
+- Create an attractive, responsive product grid or list.
+- Each product card must display its image, title, category, price, and stock status.
+- Implement product search using the provided API.
+- Add a category filter populated dynamically from the categories API.
+- Add sorting options: price low-to-high, price high-to-low, newest, and name.
+- Implement pagination or a load-more interaction, including useful result-count information.
+- Preserve search, filter, and sorting state when navigating between pages where appropriate.
+- Show clear loading, empty-results, and error states.
+- Provide a way to clear active filters.
+
+B. DYNAMIC PRODUCT DETAILS — /products/[slug]
+
+- Fetch product information using the provided product-by-slug API.
+- Display product imagery, name, description, price, category, and stock availability.
+- Show clear stock indicators, such as In Stock, Low Stock, and Out of Stock, based on the available product data.
+- Provide a fallback when an image is missing or fails to load.
+- Handle invalid product slugs with an appropriate not-found page.
+- Provide navigation back to the catalogue.
+
+C. AUTHENTICATION AND USER SESSION — /login
+
+- Build a login form with input validation and clear error messages.
+- Integrate login with the provided authentication API.
+- Display the signed-in user's role, such as ADMIN or CUSTOMER, where appropriate.
+- Implement logout and update the interface when the session ends.
+- Respect the existing HttpOnly cookie-based authentication flow. Do not attempt to read the authentication cookie directly from browser JavaScript.
+- Provide appropriate feedback for invalid credentials, expired sessions, and API errors.
+- Optional bonus: implement customer registration using the provided registration API.
+
+D. ADMIN PRODUCT MANAGEMENT
+
+Required routes:
+
+- /admin/products
+- /admin/products/new
+- /admin/products/[id]/edit
+
+Product management page:
+- Display products in a clear inventory table or responsive list.
+- Include relevant product details, stock levels, and active status.
+- Provide actions to create, edit, and delete products.
+- Include useful loading, error, and empty states.
+
+Create product page:
+- Build a form for all required product fields supported by the API.
+- Validate user input and display errors clearly.
+- Prevent repeated submissions while a request is processing.
+- Show success or failure feedback after submission.
+
+Edit product page:
+- Load the existing product from the API.
+- Pre-populate the form with its current values.
+- Validate changes and submit them to the API.
+- Show clear success and error feedback.
+
+Delete product:
+- Ask for confirmation before deleting a product.
+- Update the visible product list after successful deletion.
+- Handle failed deletions without incorrectly removing the product from the interface.
+
+Authorization:
+- Only administrators may create, edit, or delete products.
+- Customers must not be able to perform administrative actions.
+- You may hide or disable controls that the current user cannot use, but remember that the backend remains the source of authorization.
+- Handle HTTP 401 and 403 responses with clear user feedback.
+- Do not rely only on frontend role checks to secure an operation.
+
+3. TEST ACCOUNTS
+
+Use the following seeded accounts to test the different user roles.
+
+Administrator
+Email: admin@store.dev
+Password: AdminPassword123!
+Permissions: Create, edit, and delete products.
+
+Customer
+Email: customer@example.com
+Password: CustomerPassword123!
+Permissions: Browse and view products. Product mutations are not permitted.
+
+These are development assessment credentials only. Do not use them in a production environment.
+
+4. API INTEGRATION
+
+A typed API client is available at `lib/api/client.ts`. Review it before implementing your own API communication.
+
+Example usage:
+
+    import { apiClient } from "@/lib/api/client";
+
+    const response = await apiClient.products.list({
+      page: 1,
+      limit: 12,
+      category: "Audio",
+      sortBy: "price",
+      order: "asc",
+    });
+
+    console.log(response.data);
+    console.log(response.pagination);
+
+Login example:
+
+    await apiClient.auth.login({
+      email: "admin@store.dev",
+      password: "AdminPassword123!",
+    });
+
+Current-session example:
+
+    const session = await apiClient.auth.me();
+    console.log(session.data.user);
+
+Use the provided API client where suitable. You may improve it or use a data-fetching library such as React Query or SWR if you can justify the choice and keep the integration reliable.
+
+Consult `docs/API.md` for the exact supported fields, endpoint behavior, and response formats. Do not assume an API supports a field or operation that is not documented.
+
+5. TECHNICAL AND UX EXPECTATIONS
+
+- Use the existing Next.js App Router project and TypeScript.
+- Build reusable components with clear responsibilities and well-defined props.
+- Use Server Components and Client Components appropriately.
+- Implement dynamic routing using API data.
+- Keep API communication and UI components reasonably organized.
+- Use semantic HTML and accessible labels for forms and controls.
+- Ensure keyboard accessibility for interactive elements.
+- Make the application work on mobile, tablet, and desktop.
+- Provide consistent loading, success, empty, and error states.
+- Avoid unnecessary page reloads.
+- Keep the browser URL synchronized with catalogue search, filters, sorting, and pagination where appropriate.
+- Do not hardcode the product catalogue or user session.
+- Do not break or unnecessarily rewrite the supplied backend.
+- Ensure the application runs and builds successfully.
+
+6. SUBMISSION REQUIREMENTS
+
+Submit:
+
+1. Your completed source code in the provided repository or an accessible Git branch.
+2. A live deployment, if deployment and backend connectivity are available to you.
+3. A README containing setup instructions and a brief explanation of your implementation.
+4. A list of completed features and any known limitations.
+5. A brief explanation of important architectural decisions and how you tested the application.
+6. A disclosure of any AI tools used and how you verified the resulting code.
+
+Before submitting, verify that the main user flows work, the application is responsive, and no critical errors remain. Do not include private credentials, secrets, or production tokens in the repository.
+
+7. EVALUATION CRITERIA
+
+Your submission will be assessed across five areas:
+
+User Experience and Visual Polish — 30%
+- Clear visual hierarchy and consistent design.
+- Responsive layouts for mobile, tablet, and desktop.
+- Thoughtful interaction feedback, transitions, and hover/focus states.
+
+State Management and Data Integration — 25%
+- Correct use of the provided APIs.
+- Reliable loading, error, empty, and success states.
+- Appropriate synchronization between URL parameters and search/filter state.
+
+Component Architecture and Code Quality — 20%
+- Reusable, maintainable React components.
+- Clear component interfaces and sensible project structure.
+- Appropriate TypeScript usage.
+
+Form Handling and Validation — 15%
+- Useful validation and understandable error feedback.
+- Prevention of duplicate submissions.
+- Reliable handling of successful and failed API mutations.
+
+Security and Session Awareness — 10%
+- Correct use of the existing cookie-based session flow.
+- Appropriate role-aware interface behavior.
+- Correct handling of unauthorized and forbidden API responses.
+
+A visually attractive interface alone is not sufficient. Functionality, code quality, and correct API integration are essential.
+
+Good luck. We look forward to reviewing your work.
+
+
+⋮⋮
