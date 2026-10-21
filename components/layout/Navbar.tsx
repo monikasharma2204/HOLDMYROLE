@@ -2,9 +2,11 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useAuth } from "@/lib/auth/AuthContext";
 
 export function Navbar() {
   const pathname = usePathname();
+  const { user, loading, logout } = useAuth();
 
   const navLinks = [
     { href: "/", label: "Overview" },
@@ -12,6 +14,11 @@ export function Navbar() {
     { href: "/products", label: "Products Catalogue" },
     { href: "/admin/products", label: "Admin Products" },
   ];
+
+
+  const visibleLinks = navLinks.filter(
+    (link) => link.href !== "/admin/products" || user?.role === "ADMIN"
+  );
 
   return (
     <header className="border-b border-slate-200 bg-white">
@@ -29,7 +36,7 @@ export function Navbar() {
         </div>
 
         <nav className="flex items-center gap-1 sm:gap-2">
-          {navLinks.map((link) => {
+          {visibleLinks.map((link) => {
             const isActive = pathname === link.href || (link.href !== "/" && pathname.startsWith(link.href));
             return (
               <Link
@@ -45,6 +52,21 @@ export function Navbar() {
               </Link>
             );
           })}
+
+          {!loading && user && (
+            <div className="flex items-center gap-2 pl-2 text-sm">
+              <span className="text-slate-700">{user.name}</span>
+              <span className="text-xs px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-800 font-semibold">
+                {user.role}
+              </span>
+              <button
+                onClick={logout}
+                className="px-3 py-1.5 rounded-md border border-slate-300 text-slate-700 hover:bg-slate-50"
+              >
+                Log out
+              </button>
+            </div>
+          )}
         </nav>
       </div>
     </header>

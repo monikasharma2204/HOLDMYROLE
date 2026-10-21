@@ -2,15 +2,22 @@
 
 import { useState, useEffect } from "react";
 import { apiClient, UserProfile, ApiError } from "@/lib/api/client";
+import { useAuth } from "@/lib/auth/AuthContext";
+import { Eye, EyeClosed, Lock, Mail } from "lucide-react";
 
 export default function LoginPage() {
+  const { refreshUser } = useAuth();
   const [email, setEmail] = useState("admin@store.dev");
   const [password, setPassword] = useState("AdminPassword123!");
   const [user, setUser] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(false);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [showPassword, setShowPassword] = useState<boolean | false>(false);
 
+  function handleShowPassword() {
+    setShowPassword(!showPassword);
+  }
   // Check current session on mount via /api/auth/me
   useEffect(() => {
     checkCurrentSession();
@@ -21,7 +28,9 @@ export default function LoginPage() {
       setLoading(true);
       const res = await apiClient.auth.me();
       setUser(res.data.user);
-      setStatusMessage(`Authenticated as ${res.data.user.name} (${res.data.user.role}) via HttpOnly cookie`);
+      setStatusMessage(
+        `Authenticated as ${res.data.user.name} (${res.data.user.role}) via HttpOnly cookie`,
+      );
     } catch (err) {
       setUser(null);
     } finally {
@@ -38,7 +47,11 @@ export default function LoginPage() {
     try {
       const res = await apiClient.auth.login({ email, password });
       setUser(res.data.user);
-      setStatusMessage(`Successfully logged in as ${res.data.user.name} (${res.data.user.role}). Session cookie set.`);
+      console.log(res);
+      await refreshUser();
+      setStatusMessage(
+        `Successfully logged in as ${res.data.user.name} (${res.data.user.role})`,
+      );
     } catch (err) {
       if (err instanceof ApiError) {
         setErrorMessage(err.message);
@@ -58,7 +71,10 @@ export default function LoginPage() {
     try {
       await apiClient.auth.logout();
       setUser(null);
-      setStatusMessage("Logged out successfully. Authentication cookie has been cleared.");
+      await refreshUser();
+      setStatusMessage(
+        "Logged out successfully. Authentication cookie has been cleared.",
+      );
     } catch (err) {
       setErrorMessage("Logout failed.");
     } finally {
@@ -69,10 +85,8 @@ export default function LoginPage() {
   return (
     <div className="max-w-xl mx-auto space-y-6">
       <div className="border-b border-slate-200 pb-3">
-        <h1 className="text-2xl font-bold text-slate-900">Authentication Starter Shell</h1>
-        <p className="text-sm text-slate-500 mt-1">
-          Example login shell demonstrating API integration with <code className="bg-slate-100 px-1 py-0.5 rounded text-xs">/api/auth/login</code> and HttpOnly cookies.
-        </p>
+        <h1 className="text-2xl font-bold text-slate-900">Login</h1>
+        <p className="text-sm text-slate-500 mt-1">Sign-in to you account</p>
       </div>
 
       {/* Status or Error Notifications */}
@@ -92,7 +106,9 @@ export default function LoginPage() {
         <div className="bg-white p-5 rounded-lg border border-slate-200 shadow-sm space-y-4">
           <div className="flex items-center justify-between">
             <div>
-              <h2 className="font-semibold text-slate-900 text-base">{user.name}</h2>
+              <h2 className="font-semibold text-slate-900 text-base">
+                {user.name}
+              </h2>
               <p className="text-xs text-slate-500">{user.email}</p>
             </div>
             <span
@@ -115,38 +131,81 @@ export default function LoginPage() {
           <button
             onClick={handleLogout}
             disabled={loading}
-            className="w-full py-2 px-4 rounded bg-slate-800 hover:bg-slate-900 text-white text-sm font-medium transition"
+            style={{
+              backgroundColor: "#e2a731",
+
+              color: "#ffffff",
+            }}
+            className="py-2.5 w-full text-white font-semibold rounded-lg focus:ring-4 focus:outline-none transition-all duration-300 ease-in-out flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {loading ? "Logging out..." : "Log Out"}
           </button>
         </div>
       ) : (
         /* Login Form Shell */
-        <form onSubmit={handleLogin} className="bg-white p-5 rounded-lg border border-slate-200 shadow-sm space-y-4">
+        <form
+          onSubmit={handleLogin}
+          className="bg-white p-5 rounded-lg border border-slate-200 shadow-sm space-y-4"
+        >
           <div>
-            <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
-              Email Address
+            <label
+              className="text-sm font-medium"
+              style={{
+                fontFamily: "Nunito, Roboto, Inter, sans-serif",
+                color: "#292929",
+              }}
+            >
+              Email
             </label>
-            <input
-              type="email"
-              required
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="w-full px-3 py-2 border border-slate-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 font-mono"
-            />
+            <div className="relative mt-1">
+              <Mail
+                className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5"
+                style={{ color: "#78dcca" }}
+              />
+              <input
+                type="email"
+                name="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="Enter your email"
+                className="pl-10 pr-4 py-2 w-full border-[#78dcca] border rounded-lg focus:ring-2 focus:border-transparent text-sm transition-all duration-200 ease-in-out"
+                required
+              />
+            </div>
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
+            <label className="text-sm font-medium text-[#292929]">
               Password
             </label>
-            <input
-              type="password"
-              required
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="w-full px-3 py-2 border border-slate-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 font-mono"
-            />
+            <div className="relative mt-1">
+              <Lock
+                className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5"
+                style={{ color: "#78dcca" }}
+              />
+              <input
+                type={showPassword ? "text" : "password"}
+                name="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="Enter your password"
+                className="pl-10 pr-10 py-2 border-[#78dcca] w-full border rounded-lg focus:ring-2 focus:border-transparent text-sm transition-all duration-200 ease-in-out"
+                required
+              />
+              {showPassword ? (
+                <Eye
+                  onClick={handleShowPassword}
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2 h-5 w-5 cursor-pointer hover:text-yellow-600 transition-colors"
+                  style={{ color: "#78dcca" }}
+                />
+              ) : (
+                <EyeClosed
+                  onClick={handleShowPassword}
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2 h-5 w-5 cursor-pointer hover:text-yellow-600 transition-colors"
+                  style={{ color: "#78dcca" }}
+                />
+              )}
+            </div>
           </div>
 
           <div className="flex gap-2 pt-2">
@@ -175,18 +234,17 @@ export default function LoginPage() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-2 px-4 rounded bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium transition"
+            style={{
+              backgroundColor: "#e2a731",
+
+              color: "#ffffff",
+            }}
+            className="py-2.5 w-full text-white font-semibold rounded-lg focus:ring-4 focus:outline-none transition-all duration-300 ease-in-out flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {loading ? "Authenticating..." : "Sign In"}
           </button>
         </form>
       )}
-
-      {/* Candidate Guidance */}
-      <div className="p-4 bg-slate-100 border border-slate-200 rounded text-xs text-slate-600 space-y-1">
-        <p className="font-semibold text-slate-800">Candidate Implementation Note:</p>
-        <p>This is a functional reference implementation. Candidate interns will implement proper registration forms, validation error states, password visibility toggles, and clean UI components.</p>
-      </div>
     </div>
   );
 }

@@ -1,32 +1,45 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
-import Link from "next/link";
+import { Suspense, useEffect, useState, useCallback } from "react";
+// import Link from "next/link";
 import { apiClient, ProductItem } from "@/lib/api/client";
-import Image from "next/image";
+import { ProductCard } from "@/components/products/ProductCard";
+// import Image from "next/image";
 
-export default function ProductsPage() {
+import { useRouter, useSearchParams } from "next/navigation";
+
+const PAGE_SIZE = 6;
+
+function ProductsContent() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+
   const [products, setProducts] = useState<ProductItem[]>([]);
   const [categories, setCategories] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Filter & Pagination States
-  const [search, setSearch] = useState("");
-  const [category, setCategory] = useState("");
-  const [sortBy, setSortBy] = useState<"name" | "price" | "createdAt" | "stock">("createdAt");
-  const [order, setOrder] = useState<"asc" | "desc">("desc");
-  const [page, setPage] = useState(1);
+ 
+  const [search, setSearch] = useState(searchParams.get("search") || "");
+  const [searchText, setSearchText] = useState(searchParams.get("search") || ""); // what is typed in the box
+  const [category, setCategory] = useState(searchParams.get("category") || "");
+  const [sortBy, setSortBy] = useState<"name" | "price" | "createdAt" | "stock">(
+    (searchParams.get("sortBy") as "name" | "price" | "createdAt") || "createdAt"
+  );
+  const [order, setOrder] = useState<"asc" | "desc">(
+    (searchParams.get("order") as "asc" | "desc") || "desc"
+  );
+  const [page, setPage] = useState(Number(searchParams.get("page")) || 1);
   const [pagination, setPagination] = useState({ page: 1, limit: 10, total: 0, totalPages: 1 });
 
-  const fetchProducts = useCallback(async (searchQuery?: string) => {
+  const fetchProducts = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
       const res = await apiClient.products.list({
         page,
-        limit: 6,
-        search: searchQuery !== undefined ? searchQuery : search,
+        limit: PAGE_SIZE,
+        search,
         category: category || undefined,
         sortBy,
         order,
@@ -54,11 +67,71 @@ export default function ProductsPage() {
     fetchProducts();
   }, [fetchProducts]);
 
+  useEffect(() => {
+    const params = new URLSearchParams();
+    if (search) params.set("search", search);
+    if (category) params.set("category", category);
+    if (sortBy !== "createdAt" || order !== "desc") {
+      params.set("sortBy", sortBy);
+      params.set("order", order);
+    }
+    if (page > 1) params.set("page", String(page));
+
+    const query = params.toString();
+    const url = query ? `/products?${query}` : "/products";
+
+  
+    try {
+      sessionStorage.setItem("catalogueUrl", url);
+    } catch {
+  
+    }
+
+    router.replace(url);
+  }, [search, category, sortBy, order, page, router]);
+
   function handleSearchSubmit(e: React.FormEvent) {
     e.preventDefault();
     setPage(1);
-    fetchProducts(search);
+    setSearch(searchText.trim());
   }
+
+  function handleSortChange(e: React.ChangeEvent<HTMLSelectElement>) {
+  const choice = e.target.value;
+
+  if (choice === "price-asc") {
+    setSortBy("price");
+    setOrder("asc");
+  }
+  if (choice === "price-desc") {
+    setSortBy("price");
+    setOrder("desc");
+  }
+  if (choice === "createdAt-desc") {
+    setSortBy("createdAt");
+    setOrder("desc");
+  }
+  if (choice === "name-asc") {
+    setSortBy("name");
+    setOrder("asc");
+  }
+
+  setPage(1);
+}
+
+function clearFilters() {
+  setSearch("");
+  setSearchText("");
+  setCategory("");
+  setSortBy("createdAt");
+  setOrder("desc");
+  setPage(1);
+}
+
+const hasFilters = search !== "" || category !== "" || sortBy !== "createdAt" || order !== "desc";
+
+const firstItem = (pagination.page - 1) * pagination.limit + 1;
+const lastItem = firstItem + products.length - 1;
 
   return (
     <div className="space-y-6">
@@ -76,8 +149,8 @@ export default function ProductsPage() {
           <input
             type="text"
             placeholder="Search products by name..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            value={searchText}
+            onChange={(e) => setSearchText(e.target.value)}
             className="flex-1 px-3 py-2 border border-slate-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
           />
           <button
@@ -106,89 +179,70 @@ export default function ProductsPage() {
             </select>
 
             <span className="font-semibold text-slate-700 ml-2">Sort:</span>
-            <select
-              value={sortBy}
-              onChange={(e) => setSortBy(e.target.value as any)}
-              className="px-2 py-1 border border-slate-300 rounded bg-white"
-            >
-              <option value="createdAt">Date Created</option>
-              <option value="name">Name</option>
-              <option value="price">Price</option>
-              <option value="stock">Stock</option>
-            </select>
+           <select
+  value={`${sortBy}-${order}`}
+  onChange={handleSortChange}
+  className="px-2 py-1 border border-slate-300 rounded bg-white"
+>
+  <option value="createdAt-desc">Newest</option>
+  <option value="price-asc">Price: Low to High</option>
+  <option value="price-desc">Price: High to Low</option>
+  <option value="name-asc">Name (A-Z)</option>
+</select>
 
-            <select
-              value={order}
-              onChange={(e) => setOrder(e.target.value as any)}
-              className="px-2 py-1 border border-slate-300 rounded bg-white"
-            >
-              <option value="desc">Descending</option>
-              <option value="asc">Ascending</option>
-            </select>
+            {hasFilters && (
+              <button
+                onClick={clearFilters}
+                className="px-3 py-1 border border-slate-300 rounded bg-white text-slate-700 hover:bg-slate-50"
+              >
+                Clear filters
+              </button>
+            )}
           </div>
 
-          <div className="font-mono text-slate-500">
-            Total Matching: {pagination.total} (Page {pagination.page} of {pagination.totalPages || 1})
-          </div>
+        <p className="text-sm text-slate-600">
+  {pagination.total === 0
+    ? "No products found"
+    : `Showing ${firstItem}-${lastItem} of ${pagination.total} products`}
+</p>
         </div>
       </div>
 
       {/* Product List Representation */}
       {loading ? (
-        <div className="p-8 text-center text-slate-500 text-sm font-mono">
-          Loading products from API...
+        <div className="p-8 text-center text-slate-500 text-sm min-h-[400px]">
+          Loading products...
         </div>
       ) : error ? (
-        <div className="p-4 bg-rose-50 border border-rose-200 text-rose-700 text-sm rounded">
-          {error}
+        <div className="p-8 text-center bg-rose-50 border border-rose-200 rounded-lg">
+          <p className="font-semibold text-rose-800">Could not load products</p>
+          <p className="text-sm text-rose-700 mt-1">{error}</p>
+          <button
+            onClick={() => fetchProducts()}
+            className="mt-4 px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white text-sm font-medium rounded"
+          >
+            Try again
+          </button>
         </div>
       ) : products.length === 0 ? (
-        <div className="p-8 text-center text-slate-500 bg-white rounded border border-slate-200 text-sm">
-          No active products match your criteria.
+        <div className="p-10 text-center bg-white border border-dashed border-slate-300 rounded-lg">
+          <p className="font-semibold text-slate-900">No products match your search</p>
+          <p className="text-sm text-slate-500 mt-1">Try a different search word or category.</p>
+          {hasFilters && (
+            <button
+              onClick={clearFilters}
+              className="mt-4 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium rounded"
+            >
+              Clear filters
+            </button>
+          )}
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {products.map((product) => (
-            <div
-              key={product.id}
-              className="bg-white border border-slate-200 rounded-lg p-4 flex flex-col justify-between hover:shadow-sm transition"
-            >
-              <div>
-                <Image
-                src={product?.imageUrl}
-                alt="Product Image"
-                width="150"
-                height="150"
-                className="object-cover"
-                />
-              </div>
-              <div>
-                <div className="flex items-center justify-between text-xs text-slate-500 mb-1">
-                  <span className="font-semibold text-indigo-600">{product.category}</span>
-                  <span className="bg-green-100 border-green-300 p-2 rounded-2xl">Stock: {product.stock}</span>
-                </div>
-                <h2 className="font-bold text-slate-900 text-base line-clamp-1">
-                  {product.name}
-                </h2>
-                <p className="text-xs text-slate-600 mt-2 line-clamp-2">
-                  {product.description}
-                </p>
-              </div>
-
-              <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between">
-                <span className="text-base font-bold text-slate-900 font-mono">
-                  ${product.price.toFixed(2)}
-                </span>
-                <Link
-                  href={`/products/${product.slug}`}
-                  className="text-xs font-semibold text-indigo-600 hover:text-indigo-800 hover:underline"
-                >
-                  View Details &rarr;
-                </Link>
-              </div>
-            </div>
-          ))}
-        </div>
+       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+  {products.map((product) => (
+    <ProductCard key={product.id} product={product} />
+  ))}
+</div>
       )}
 
       {/* Pagination Controls */}
@@ -214,5 +268,14 @@ export default function ProductsPage() {
         </button>
       </div>
     </div>
+  );
+}
+
+// useSearchParams needs a Suspense wrapper, otherwise "next build" fails
+export default function ProductsPage() {
+  return (
+    <Suspense fallback={<p>Loading...</p>}>
+      <ProductsContent />
+    </Suspense>
   );
 }
